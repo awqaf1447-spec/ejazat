@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إجازات العاملين بالمساجد</title>
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: #f2f4f8;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-container {
+            max-width: 1300px;
+            width: 100%;
+        }
+
+        .header {
+            background: linear-gradient(145deg, #1e2b3c, #15232e);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 18px 18px 0 0;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.7rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            background: rgba(255,255,255,0.05);
+            padding: 5px 15px;
+            border-radius: 40px;
+            display: inline-block;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn.primary {
+            background: #2b8c5e;
+            border-color: #36b03e;
+        }
+
+        .btn.primary:hover {
+            background: #1f9b5e;
+        }
+
+        .btn-notifications {
+            position: relative;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            background: #ff4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border: 2px solid #1e2b3c;
+        }
+
+        .notification-badge.hidden {
+            display: none;
+        }
+
+        .alerts-modal-content {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .alerts-modal-content .alert-item {
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #fff9e5;
+            border-radius: 12px;
+            border-right: 4px solid #f4b836;
+        }
+
+        .alerts-modal-content .alert-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .alerts-panel {
+            background: #fff9e5;
+            border-right: 6px solid #f4b836;
+            padding: 16px 25px;
+            margin: 20px 0;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            font-size: 1rem;
+            color: #2d3e50;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+
+        .alert-icon { font-size: 1.3rem; }
+
+        .alert-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .alert-btn {
+            background: white;
+            border: 1px solid #f4b836;
+            color: #2d3e50;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .alert-btn:hover {
+            background: #f4b836;
+            color: white;
+        }
+
+		.table-wrapper {
+			background: white;
+			border-radius: 20px;
+			padding: 5px;
+			box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+			overflow-x: auto;
+			overflow-y: auto;
+			max-height: 330px;
+			margin-top: 20px;
+		}
+        
+        .table-wrapper::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        th {
+            background: #f8fafd;
+            color: #1e3a5f;
+            font-weight: 600;
+            padding: 18px 12px;
+            font-size: 0.95rem;
+            border-bottom: 2px solid #dde3ed;
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #eaeef4;
+            color: #1f2a3e;
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        .status-active { background-color: #e2f7e2; }
+        .status-warning { background-color: #fff2cd; }
+        .status-upcoming { background-color: #e3f2fd; }
+        .status-danger { background-color: #ffe1de; }
+        .status-done { background-color: #ececec; }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .badge-active { background: #c6e9c6; color: #1b5e1b; }
+        .badge-warning { background: #ffe4a2; color: #8e6100; }
+        .badge-upcoming { background: #90caf9; color: #01579b; }
+        .badge-danger { background: #fccac7; color: #a52a2a; }
+        .badge-done { background: #d2d2d2; color: #3f3f3f; }
+
+        .action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+        .action-btn {
+            background: #f0f4fa;
+            border: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: #1a3b5c;
+        }
+        .action-btn:hover { background: #d9e2ef; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .modal-overlay.show { visibility: visible; opacity: 1; }
+
+        .modal-content {
+            background: white;
+            width: 95%;
+            max-width: 1100px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 30px 50px rgba(0,0,0,0.3);
+            transform: scale(0.95);
+            transition: 0.2s;
+        }
+        .modal-overlay.show .modal-content { transform: scale(1); }
+
+        .modal-content h2 { margin-bottom: 25px; color: #1e2b3c; font-weight: 600; font-size: 1.8rem; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #2f4057; font-size: 1.1rem; }
+        .form-control {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid #ccd7e6;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            background: #f9fcff;
+        }
+
+        .search-suggestions {
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 16px;
+            max-height: 250px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 10;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        .search-suggestion-item {
+            padding: 12px 18px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            font-size: 1.1rem;
+        }
+        .search-suggestion-item:hover { background: #f0f7ff; }
+
+        .checkbox-group { display: flex; gap: 30px; flex-wrap: wrap; margin-top: 10px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 1.1rem; }
+        .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; }
+
+        .modal-actions { display: flex; justify-content: flex-end; gap: 20px; margin-top: 40px; }
+        .modal-actions button {
+            padding: 14px 30px;
+            border-radius: 30px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-cancel { background: #e2e8f0; color: #1e293b; }
+        .btn-save { background: #1e2b3c; color: white; }
+
+        .inner-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .inner-table th { background: #eef2f7; padding: 15px; font-size: 1.1rem; }
+        .inner-table td { padding: 15px; border-bottom: 1px solid #dee6ef; font-size: 1.05rem; }
+
+        .error-message {
+            background: #ffe1de;
+            border-right: 4px solid #d32f2f;
+            color: #b71c1c;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .balance-info {
+            background: #e3f2fd;
+            border-right: 4px solid #1976d2;
+            color: #0d47a1;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        /* بروفايل العامل - تحسينات */
+        .profile-header {
+            background: linear-gradient(135deg, #1e2b3c 0%, #2d4a6f 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+
+        .profile-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #4db8ff;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .balance-summary {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .balance-summary h3 {
+            color: #1e2b3c;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .balance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .balance-card {
+            background: #f8fafd;
+            border: 1px solid #e1e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .balance-card.warning { border-right: 5px solid #f4b836; }
+        .balance-card.danger { border-right: 5px solid #d32f2f; }
+
+        .balance-role {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e2b3c;
+            margin-bottom: 10px;
+        }
+
+        .balance-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 1rem;
+            color: #4a5568;
+        }
+
+        .balance-bar {
+            height: 8px;
+            background: #edf2f7;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .balance-bar-fill {
+            height: 100%;
+            background: #2b8c5e;
+            border-radius: 4px;
+        }
+
+        .leaves-section h3 {
+            color: #1e2b3c;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .hidden { display: none; }
+        .worker-row { cursor: pointer; transition: 0.1s; }
+        .worker-row:hover { background: #e6f0ff; }
+
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 40px;
+            color: #64748b;
+            font-size: 0.95rem;
+            border-top: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 0 0 18px 18px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.02);
+        }
+
+        .footer-brand {
+            font-weight: 600;
+            color: #1e2b3c;
+            margin-bottom: 15px;
+            display: block;
+            font-size: 1.2rem;
+        }
+
+        .footer-social {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .social-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .social-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .social-btn.facebook { background: #1877f2; color: white; }
+        .social-btn.x-platform { background: #000000; color: white; }
+
+        .footer-email {
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+        }
+
+        .footer-email a {
+            color: #2b8c5e;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px dashed #2b8c5e;
+            transition: 0.2s;
+        }
+
+        .footer-email a:hover {
+            color: #1f9b5e;
+            border-bottom-style: solid;
+        }
+
+        .footer-rights {
+            opacity: 0.7;
+            font-size: 0.85rem;
+        }
+
+        /* ===== تنسيقات تسجيل الدخول ===== */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-box {
+            background: white;
+            border-radius: 20px;
+            padding: 50px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 450px;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-box h1 {
+            text-align: center;
+            color: #1e2b3c;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .login-box .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group-login {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group-login label {
+            color: #1e2b3c;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .form-group-login input {
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: 0.3s;
+            font-family: inherit;
+        }
+
+        .form-group-login input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .login-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .login-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            background: #ffe1de;
+            color: #a52a2a;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            border-right: 4px solid #d32f2f;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .login-error.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .logout-btn {
+            background: #d32f2f;
+            border-color: #d32f2f;
+        }
+
+        .logout-btn:hover {
+            background: #b71c1c;
+            border-color: #b71c1c;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-size: 0.95rem;
+        }
+
+        .hidden-section {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- واجهة تسجيل الدخول -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-box">
+            <h1>🔐 تسجيل الدخول</h1>
+            <p class="subtitle">منظومة إجازات العاملين بالمساجد</p>
+            <div id="loginError" class="login-error"></div>
+            <form class="login-form" id="loginForm">
+                <div class="form-group-login">
+                    <label for="loginEmail">البريد الإلكتروني</label>
+                    <input type="email" id="loginEmail" placeholder="أدخل بريدك الإلكتروني" required>
+                </div>
+                <div class="form-group-login">
+                    <label for="loginPassword">كلمة المرور</label>
+                    <input type="password" id="loginPassword" placeholder="أدخل كلمة المرور" required>
+                </div>
+                <button type="submit" class="login-button" id="loginBtn">دخول</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- التطبيق الرئيسي (مخفي في البداية) -->
+    <div class="app-container hidden-section" id="appContainer">
+        <div class="header">
+            <h1> 📋منظومة إجازات العاملين بالمساجد - السواني </h1>
+            <div class="btn-group">
+                <button class="btn" id="addWorkerBtn">➕ إضافة عامل</button>
+                <button class="btn" id="addLeaveBtn">📅 تسجيل إجازة</button>
+                <button class="btn" id="manageWorkersBtn">👥 إدارة العاملين</button>
+                <button class="btn" id="exportBtn">💾 تصدير البيانات</button>
+                <button class="btn" id="importBtn">📥 استيراد البيانات</button>
+                <button class="btn btn-notifications" id="notificationsBtn">🔔 التنبيهات
+                    <span class="notification-badge" id="notificationBadge">0</span>
+                </button>
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span id="userEmail"></span>
+                </div>
+                <button class="btn logout-btn" id="logoutBtn" style="display: none;">🚪 تسجيل الخروج</button>
+            </div>
+        </div>
+
+
+
+        <div class="table-wrapper">
+            <table id="leavesTable">
+                <thead>
+                    <tr>
+                        <th>اسم العامل</th>
+                        <th>المسجد</th>
+                        <th>الصفة</th>
+                        <th>بداية الإجازة</th>
+                        <th>نهاية الإجازة</th>
+                        <th>عدد الأيام</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <footer class="footer">
+            <div class="footer-contact-info" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <span class="footer-brand" style="font-weight: bold;">عناوين الإتصال</span>
+                <a href="https://maps.app.goo.gl/2FjWJ5X3sd2sK83y6" target="_blank" title="الموقع على خرائط جوجل" style="color: inherit; text-decoration: none;">الكريمية - السوق الاستثماري</a>
+            </div>
+            
+            <div class="footer-social">
+                <a href="https://www.facebook.com/share/1B7h4kKDW1/" target="_blank" class="social-btn facebook" title="فيسبوك">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </a>
+                <a href="https://x.com/AwqafAlswani?t=Huc3spquFqzep3O-uGnR5w&s=09" target="_blank" class="social-btn x-platform" title="منصة X">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+            </div>
+
+            <div class="footer-email">
+                📧 البريد الإلكتروني: <a href="mailto:alswani@awqaf.gov.ly">alswani@awqaf.gov.ly</a>
+            </div>
+
+            <div class="footer-rights">
+                جميع الحقوق محفوظة &copy; 2026 قسم المساجد بمكتب الأوقاف والشؤون الإسلامية - السواني
+            </div>
+        </footer>
+    </div>
+    </div><!-- إغلاق appContainer -->
+
+    <!-- مودال إضافة عامل -->
+    <div class="modal-overlay" id="workerModal">
+        <div class="modal-content">
+            <h2 id="workerModalTitle">➕ إضافة عامل جديد</h2>
+            <input type="hidden" id="editWorkerId">
+            <div class="form-group">
+                <label>الاسم الكامل</label>
+                <input type="text" id="workerName" class="form-control" placeholder="أدخل اسم العامل">
+            </div>
+            <div class="form-group">
+                <label>المسجد / مركز التحفيظ</label>
+                <input type="text" id="workerMosque" class="form-control" placeholder="اسم المسجد او مركز التحفيظ">
+            </div>
+            <div class="form-group">
+                <label>الصفة (يمكن اختيار أكثر من صفة)</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" id="checkImam" value="إمام"> إمام</label>
+                    <label><input type="checkbox" id="checkKhatib" value="خطيب"> خطيب</label>
+                    <label><input type="checkbox" id="checkQayyim" value="قيم"> قيم</label>
+                    <label><input type="checkbox" id="checkMuhaffiz" value="محفظ"> محفظ</label>
+                    <label><input type="checkbox" id="checkMuhaffiza" value="محفظة"> محفظة</label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelWorkerBtn">إلغاء</button>
+                <button class="btn-save" id="saveWorkerBtn">حفظ البيانات</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال تسجيل إجازة -->
+    <div class="modal-overlay" id="leaveModal">
+        <div class="modal-content">
+            <h2>📅 تسجيل إجازة جديدة</h2>
+            <div id="leaveErrorMessage"></div>
+            <div id="leaveBalanceInfo"></div>
+            <input type="hidden" id="editLeaveId">
+            <div class="form-group" style="position: relative;">
+                <label>البحث عن عامل</label>
+                <input type="text" id="workerSearchInput" class="form-control" placeholder="اكتب اسم العامل للبحث...">
+                <div id="workerSuggestions" class="search-suggestions hidden"></div>
+                <input type="hidden" id="selectedWorkerId">
+            </div>
+            <div class="form-group">
+                <label>الصفة (للإجازة الحالية)</label>
+                <select id="leaveRole" class="form-control" disabled>
+                    <option value="">-- اختر العامل أولاً --</option>
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>تاريخ البدء</label>
+                    <input type="date" id="leaveStart" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>تاريخ الانتهاء</label>
+                    <input type="date" id="leaveEnd" class="form-control">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelLeaveBtn">إلغاء</button>
+                <button class="btn-save" id="saveLeaveBtn">حفظ الإجازة</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال إدارة العاملين -->
+    <div class="modal-overlay" id="workerListModal">
+        <div class="modal-content">
+            <h2>👥 إدارة قائمة العاملين</h2>
+            <div class="form-group">
+                <input type="text" id="workerListSearch" class="form-control" placeholder="بحث عن عامل...">
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="inner-table">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>المسجد</th>
+                            <th>الصفة</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workerListBody"></tbody>
+                </table>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="closeWorkerListBtn">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال التنبيهات -->
+    <div class="modal-overlay" id="notificationsModal">
+        <div class="modal-content">
+            <h2>🔔 التنبيهات</h2>
+            <div class="alerts-modal-content" id="alertsModalContent">
+                <div class="alert-item"><span class="alert-icon">✅</span> <span>لا توجد تنبيهات حالياً.</span></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="closeNotificationsBtn">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال بروفايل العامل - محسّن -->
+    <div class="modal-overlay" id="workerProfileModal">
+        <div class="modal-content">
+            <!-- رأس البروفايل -->
+            <div class="profile-header">
+                <h2 id="profileWorkerName" style="margin-bottom: 20px;">سجل إجازات العامل</h2>
+                <div class="profile-info">
+                    <div class="info-item">
+                        <div class="info-label">👤 الاسم</div>
+                        <div class="info-value" id="profileName">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">🕌 المسجد</div>
+                        <div class="info-value" id="profileMosque">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">💼 الصفة</div>
+                        <div class="info-value" id="profileRoles">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ملخص الرصيد -->
+            <div class="balance-summary">
+                <h3>📊 ملخص رصيد الإجازات السنوية</h3>
+                <div class="balance-grid" id="balanceGrid">
+                    <!-- سيتم ملؤها ديناميكياً -->
+                </div>
+            </div>
+
+            <!-- زر إضافة إجازة -->
+            <button class="btn primary" id="addLeaveFromProfileBtn" style="margin-bottom: 15px;">➕ إضافة إجازة لهذا العامل</button>
+
+            <!-- سجل الإجازات -->
+            <div class="leaves-section">
+                <h3>📋 سجل الإجازات</h3>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="inner-table">
+                        <thead><tr><th>الصفة</th><th>البداية</th><th>النهاية</th><th>الأيام</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                        <tbody id="profileLeavesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" id="closeProfileBtn">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== متغيرات Firebase Authentication ==========
+        let currentUser = null;
+        let firebaseAuthReady = false;
+
+        // عناصر التسجيل
+        const loginContainer = document.getElementById('loginContainer');
+        const appContainer = document.getElementById('appContainer');
+        const loginForm = document.getElementById('loginForm');
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        const loginError = document.getElementById('loginError');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userEmail = document.getElementById('userEmail');
+
+        // تهيئة Firebase الموحدة
+        function initializeFirebaseApp() {
+            try {
+                const firebaseConfig = {
+                    apiKey: "AIzaSyBhxqtt7zKesWQ6aVjZHvuOg080YYXjD84",
+                    authDomain: "awqaf-system-88051.firebaseapp.com",
+                    databaseURL: "https://awqaf-system-88051-default-rtdb.firebaseio.com",
+                    projectId: "awqaf-system-88051",
+                    storageBucket: "awqaf-system-88051.firebasestorage.app",
+                    messagingSenderId: "822088177935",
+                    appId: "1:822088177935:web:818c8aec25309a15c4c67a",
+                    measurementId: "G-DE5MQF91RZ"
+                };
+
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                    console.log('✅ Firebase تم تهيئته بنجاح');
+                }
+                firebaseAuthReady = true;
+            } catch (error) {
+                console.error('⚠️ فشل تهيئة Firebase:', error);
+            }
+        }
+
+        // تسجيل الدخول
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = loginEmail.value.trim();
+            const password = loginPassword.value;
+
+            if (!email || !password) {
+                showLoginError('البريد الإلكتروني وكلمة المرور مطلوبان');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="login-loading"></span>جاري التحقق...';
+
+            try {
+                const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                currentUser = userCredential.user;
+                console.log('✅ الدخول بنجاح:', currentUser.email);
+                // تأكد من تحديث الواجهة فوراً
+                showApp();
+            } catch (error) {
+                let errorMessage = 'خطأ في تسجيل الدخول: ' + error.message;
+                
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'تنسيق البريد الإلكتروني غير صحيح';
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = 'فشل الاتصال بالإنترنت، يرجى التحقق من اتصالك';
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = 'تم حظر المحاولات مؤقتاً لكثرة الأخطاء، حاول لاحقاً';
+                }
+                
+                showLoginError(errorMessage);
+                console.error('❌ Firebase Auth Error:', error.code, error.message);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = 'دخول';
+            }
+        }
+
+        // عرض رسالة خطأ
+        function showLoginError(message) {
+            loginError.textContent = '❌ ' + message;
+            loginError.classList.add('show');
+            setTimeout(() => {
+                loginError.classList.remove('show');
+            }, 5000);
+        }
+
+        // عرض التطبيق بعد التسجيل
+        let appStarted = false;
+        function showApp() {
+            loginContainer.style.display = 'none';
+            appContainer.classList.remove('hidden-section');
+            userEmail.textContent = currentUser.email;
+            userInfo.style.display = 'flex';
+            logoutBtn.style.display = 'inline-flex';
+            
+            // التأكد من تشغيل التطبيق مرة واحدة فقط
+            if (!appStarted) {
+                appStarted = true;
+                startApp();
+            }
+        }
+
+        // إخفاء التطبيق عند تسجيل الخروج
+        function hideApp() {
+            appContainer.classList.add('hidden-section');
+            loginContainer.style.display = 'flex';
+            userInfo.style.display = 'none';
+            logoutBtn.style.display = 'none';
+            loginForm.reset();
+            loginError.classList.remove('show');
+        }
+
+        // تسجيل الخروج
+        async function handleLogout() {
+            try {
+                await firebase.auth().signOut();
+                currentUser = null;
+                console.log('✅ تم تسجيل الخروج بنجاح');
+                hideApp();
+            } catch (error) {
+                console.error('❌ خطأ في تسجيل الخروج:', error);
+            }
+        }
+
+        // مراقبة حالة التسجيل
+        function setupAuthStateListener() {
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
+                    showApp();
+                } else {
+                    currentUser = null;
+                    hideApp();
+                }
+            });
+        }
+
+        // إضافة مستمعات الأحداث
+        loginForm.addEventListener('submit', handleLogin);
+        logoutBtn.addEventListener('click', handleLogout);
+
+        // تهيئة Firebase فوراً
+        initializeFirebaseApp();
+        setupAuthStateListener();
+
+        // ========== بداية كود التطبيق الرئيسي ==========
+        function startApp() {
+            let workers = [];
+            let leaves = [];
+            let nextWorkerId = 1;
+            let nextLeaveId = 1;
+
+            const tbody = document.getElementById('tableBody');
+            const alertsPanel = document.getElementById('alertsPanel');
+
+            const addWorkerBtn = document.getElementById('addWorkerBtn');
+            const addLeaveBtn = document.getElementById('addLeaveBtn');
+            const manageWorkersBtn = document.getElementById('manageWorkersBtn');
+            const exportBtn = document.getElementById('exportBtn');
+            const importBtn = document.getElementById('importBtn');
+            const notificationsBtn = document.getElementById('notificationsBtn');
+            const notificationsModal = document.getElementById('notificationsModal');
+            const alertsModalContent = document.getElementById('alertsModalContent');
+            const closeNotificationsBtn = document.getElementById('closeNotificationsBtn');
+            const notificationBadge = document.getElementById('notificationBadge');
+
+            const workerModal = document.getElementById('workerModal');
+            const leaveModal = document.getElementById('leaveModal');
+            const workerListModal = document.getElementById('workerListModal');
+            const workerProfileModal = document.getElementById('workerProfileModal');
+
+            const workerName = document.getElementById('workerName');
+            const workerMosque = document.getElementById('workerMosque');
+            const checkImam = document.getElementById('checkImam');
+            const checkKhatib = document.getElementById('checkKhatib');
+            const checkQayyim = document.getElementById('checkQayyim');
+            const checkMuhaffiz = document.getElementById('checkMuhaffiz');
+            const checkMuhaffiza = document.getElementById('checkMuhaffiza');
+            const editWorkerId = document.getElementById('editWorkerId');
+            const workerModalTitle = document.getElementById('workerModalTitle');
+
+            const workerSearchInput = document.getElementById('workerSearchInput');
+            const workerSuggestions = document.getElementById('workerSuggestions');
+            const selectedWorkerId = document.getElementById('selectedWorkerId');
+            const leaveRole = document.getElementById('leaveRole');
+            const leaveStart = document.getElementById('leaveStart');
+            const leaveEnd = document.getElementById('leaveEnd');
+            const editLeaveId = document.getElementById('editLeaveId');
+            const leaveErrorMessage = document.getElementById('leaveErrorMessage');
+            const leaveBalanceInfo = document.getElementById('leaveBalanceInfo');
+
+            const workerListBody = document.getElementById('workerListBody');
+            const workerListSearch = document.getElementById('workerListSearch');
+
+            const profileWorkerName = document.getElementById('profileWorkerName');
+            const profileName = document.getElementById('profileName');
+            const profileMosque = document.getElementById('profileMosque');
+            const profileRoles = document.getElementById('profileRoles');
+            const balanceGrid = document.getElementById('balanceGrid');
+            const profileLeavesBody = document.getElementById('profileLeavesBody');
+            const addLeaveFromProfileBtn = document.getElementById('addLeaveFromProfileBtn');
+
+            const cancelWorkerBtn = document.getElementById('cancelWorkerBtn');
+            const cancelLeaveBtn = document.getElementById('cancelLeaveBtn');
+            const closeWorkerListBtn = document.getElementById('closeWorkerListBtn');
+            const closeProfileBtn = document.getElementById('closeProfileBtn');
+            const closeNotificationsBtn2 = document.getElementById('closeNotificationsBtn');
+
+            const saveWorkerBtn = document.getElementById('saveWorkerBtn');
+            const saveLeaveBtn = document.getElementById('saveLeaveBtn');
+
+            const MAX_ANNUAL_LEAVE_DAYS = 30;
+
+            // منطق التعارض بين الصفات
+            const maleRoles = [checkImam, checkKhatib, checkQayyim, checkMuhaffiz];
+            const femaleRole = checkMuhaffiza;
+
+            maleRoles.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        femaleRole.checked = false;
+                        femaleRole.disabled = true;
+                    } else {
+                        const anyMaleChecked = maleRoles.some(cb => cb.checked);
+                        if (!anyMaleChecked) femaleRole.disabled = false;
+                    }
+                });
+            });
+
+            femaleRole.addEventListener('change', () => {
+                if (femaleRole.checked) {
+                    maleRoles.forEach(cb => {
+                        cb.checked = false;
+                        cb.disabled = true;
+                    });
+                } else {
+                    maleRoles.forEach(cb => cb.disabled = false);
+                }
+            });
+
+            function dateDiffInDays(start, end) {
+                const s = new Date(start);
+                const e = new Date(end);
+                s.setHours(0,0,0,0);
+                e.setHours(0,0,0,0);
+                const diffTime = e - s;
+                return Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            }
+
+            function isOverlapping(workerId, role, start, end, excludeId = null) {
+                for (let l of leaves) {
+                    if (excludeId && l.id === excludeId) continue;
+                    if (l.workerId === workerId && l.role === role) {
+                        const lStart = new Date(l.startDate);
+                        const lEnd = new Date(l.endDate);
+                        const newStart = new Date(start);
+                        const newEnd = new Date(end);
+                        if (newStart <= lEnd && newEnd >= lStart) return true;
+                    }
+                }
+                return false;
+            }
+
+            function getUsedDays(workerId, role, excludeLeaveId = null) {
+                const currentYear = new Date().getFullYear();
+                let total = 0;
+                for (let l of leaves) {
+                    if (excludeLeaveId && l.id === excludeLeaveId) continue;
+                    if (l.workerId === workerId && l.role === role) {
+                        const year = new Date(l.startDate).getFullYear();
+                        if (year === currentYear) total += dateDiffInDays(l.startDate, l.endDate);
+                    }
+                }
+                return total;
+            }
+
+            function getRemainingDays(workerId, role, excludeLeaveId = null) {
+                const used = getUsedDays(workerId, role, excludeLeaveId);
+                return MAX_ANNUAL_LEAVE_DAYS - used;
+            }
+
+            let firebaseReady = true; // تم التهيئة خارجياً
+            let appDataRef = firebase.database().ref('appData');
+
+            function initializeFirebase() {
+                // دالة فارغة للحفاظ على التوافق مع الكود الأصلي
+                console.log('✅ تم ربط قاعدة البيانات بالتطبيق الرئيسي');
+            }
+
+            function saveData() {
+                try {
+                    if (!firebaseReady || !appDataRef) {
+                        // حفظ محلي كنسخة احتياطية
+                        localStorage.setItem('mosqueLeavesData', JSON.stringify({ workers, leaves, nextWorkerId, nextLeaveId }));
+                        return;
+                    }
+
+                    appDataRef.set({
+                        workers,
+                        leaves,
+                        nextWorkerId,
+                        nextLeaveId
+                    }).catch(error => {
+                        console.warn('خطأ في حفظ البيانات على Firebase، جاري الحفظ محلياً:', error);
+                        localStorage.setItem('mosqueLeavesData', JSON.stringify({ workers, leaves, nextWorkerId, nextLeaveId }));
+                    });
+                } catch (error) {
+                    console.error('خطأ في saveData:', error);
+                    localStorage.setItem('mosqueLeavesData', JSON.stringify({ workers, leaves, nextWorkerId, nextLeaveId }));
+                }
+            }
+
+            function loadData() {
+                return new Promise((resolve) => {
+                    try {
+                        if (!firebaseReady || !appDataRef) {
+                            loadFromLocalStorage();
+                            resolve();
+                            return;
+                        }
+
+                        appDataRef.once('value', (snapshot) => {
+                            const data = snapshot.val();
+                            if (data) {
+                                workers = data.workers || [];
+                                leaves = data.leaves || [];
+                                nextWorkerId = data.nextWorkerId || 1;
+                                nextLeaveId = data.nextLeaveId || 1;
+                                console.log('✅ تم تحميل البيانات من Firebase');
+                            } else {
+                                loadFromLocalStorage();
+                            }
+                            resolve();
+                        }).catch(error => {
+                            console.warn('خطأ في تحميل البيانات من Firebase، جاري استخدام التخزين المحلي:', error);
+                            loadFromLocalStorage();
+                            resolve();
+                        });
+                    } catch (error) {
+                        console.error('خطأ في loadData:', error);
+                        loadFromLocalStorage();
+                        resolve();
+                    }
+                });
+            }
+
+            function loadFromLocalStorage() {
+                try {
+                    const saved = localStorage.getItem('mosqueLeavesData');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        workers = data.workers || [];
+                        leaves = data.leaves || [];
+                        nextWorkerId = data.nextWorkerId || 1;
+                        nextLeaveId = data.nextLeaveId || 1;
+                        console.log('✅ تم تحميل البيانات من التخزين المحلي');
+                    }
+                } catch (e) {
+                    console.warn("خطأ في التحميل المحلي");
+                }
+
+                if (workers.length === 0) {
+                    workers.push({ id: nextWorkerId++, name: "أحمد السيد", mosque: "مسجد النور", roles: ["إمام", "خطيب"] });
+                    workers.push({ id: nextWorkerId++, name: "محمود رضا", mosque: "مسجد الفرقان", roles: ["قيم"] });
+                    workers.push({ id: nextWorkerId++, name: "ياسر عبدالله", mosque: "مسجد السلام", roles: ["إمام"] });
+                    const today = new Date();
+                    const y = today.getFullYear();
+                    leaves.push({ id: nextLeaveId++, workerId: 1, role: "إمام", startDate: `${y}-01-01`, endDate: `${y}-01-10`, isBackToWork: false });
+                }
+            }
+
+            function renderTable() {
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                // الحصول على تاريخ اليوم بتنسيق ISO (YYYY-MM-DD)
+                const todayDate = new Date();
+                const todayString = todayDate.getFullYear() + '-' + 
+                    String(todayDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(todayDate.getDate()).padStart(2, '0');
+
+                // ترتيب الإجازات حسب الأولوية
+                const sortedLeaves = [...leaves].sort((a, b) => {
+                    // دالة للحصول على ترتيب الحالة
+                    const getStatusOrder = (leave) => {
+                        if (leave.isBackToWork) return 4; // باشر العمل (آخر)
+                        const startStr = leave.startDate;
+                        const endStr = leave.endDate;
+                        if (endStr < todayString) return 0; // منتهية (أول)
+                        // حساب عدد الأيام بقائية للانتهاء
+                        const endDate = new Date(endStr);
+                        const todayDate2 = new Date(todayString);
+                        const diffToEnd = Math.ceil((endDate - todayDate2) / (1000*60*60*24));
+                        if (diffToEnd <= 3 && diffToEnd >= 0) return 1; // تنتهي قريباً
+                        if (startStr > todayString) return 3; // تبدأ قريباً (إجازة مستقبلية)
+                        return 2; // جارية
+                    };
+                    return getStatusOrder(a) - getStatusOrder(b);
+                });
+
+                for (let l of sortedLeaves) {
+                    const worker = workers.find(w => w.id === l.workerId);
+                    if (!worker) continue;
+
+                    const days = dateDiffInDays(l.startDate, l.endDate);
+                    let statusText = '', rowClass = '', badgeClass = '';
+
+                    if (l.isBackToWork) {
+                        statusText = 'باشر العمل'; rowClass = 'status-done'; badgeClass = 'badge-done';
+                    } else {
+                        const startStr = l.startDate;
+                        const endStr = l.endDate;
+                        if (endStr < todayString) {
+                            statusText = 'منتهية (لم يباشر)'; rowClass = 'status-danger'; badgeClass = 'badge-danger';
+                        } else if (startStr > todayString) {
+                            statusText = 'تبدأ قريباً'; rowClass = 'status-upcoming'; badgeClass = 'badge-upcoming';
+                        } else {
+                            const endDate = new Date(endStr);
+                            const todayDate2 = new Date(todayString);
+                            const diffToEnd = Math.ceil((endDate - todayDate2) / (1000*60*60*24));
+                            if (diffToEnd <= 3 && diffToEnd >= 0) {
+                                statusText = 'تنتهي قريباً'; rowClass = 'status-warning'; badgeClass = 'badge-warning';
+                            } else {
+                                statusText = 'جارية'; rowClass = 'status-active'; badgeClass = 'badge-active';
+                            }
+                        }
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = rowClass;
+                    tr.innerHTML = `
+                        <td>${worker.name}</td>
+                        <td>${worker.mosque}</td>
+                        <td>${l.role}</td>
+                        <td>${l.startDate}</td>
+                        <td>${l.endDate}</td>
+                        <td>${days}</td>
+                        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                        <td class="action-btns">
+                            ${!l.isBackToWork ? `<button class="action-btn" onclick="window.resumeLeave(${l.id})">باشر العمل</button>` : ''}
+                            <button class="action-btn" onclick="window.editLeave(${l.id})">تعديل</button>
+                            <button class="action-btn" onclick="window.deleteLeave(${l.id})">حذف</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            }
+            
+
+
+            function checkAlerts() {
+                const today = new Date(); today.setHours(0,0,0,0);
+                let count = 0;
+                const alertsList = [];
+                
+                for (let l of leaves) {
+                    if (l.isBackToWork) continue;
+                    const end = new Date(l.endDate);
+                    if (end < today) {
+                        const worker = workers.find(w => w.id === l.workerId);
+                        alertsList.push({ id: l.id, worker: worker ? worker.name : '؟' });
+                        count++;
+                    }
+                }
+                
+                // تحديث العداد
+                if (count > 0) {
+                    notificationBadge.textContent = count;
+                    notificationBadge.classList.remove('hidden');
+                } else {
+                    notificationBadge.classList.add('hidden');
+                }
+                
+                // تحديث محتوى المودال
+                updateAlertsModal(alertsList);
+            }
+            
+            function updateAlertsModal(alertsList) {
+                alertsModalContent.innerHTML = '';
+                if (alertsList.length === 0) {
+                    alertsModalContent.innerHTML = '<div class="alert-item"><span class="alert-icon">✅</span> <span>لا توجد تنبيهات حالياً.</span></div>';
+                } else {
+                    alertsList.forEach(alert => {
+                        const div = document.createElement('div');
+                        div.className = 'alert-item';
+                        div.innerHTML = `
+                            <span>
+                                <span class="alert-icon">⚠️</span> 
+                                تنبيه: انتهت إجازة <b>${alert.worker}</b> ولم يباشر العمل بعد!
+                            </span>
+                            <div class="alert-actions">
+                                <button class="alert-btn" onclick="window.resumeLeaveFromAlert(${alert.id})">باشر العمل</button>
+                                <button class="alert-btn" onclick="window.deleteLeaveFromAlert(${alert.id})">حذف</button>
+                            </div>
+                        `;
+                        alertsModalContent.appendChild(div);
+                    });
+                }
+            }
+
+            function saveWorker() {
+                const name = workerName.value.trim();
+                const mosque = workerMosque.value.trim();
+                const roles = [];
+                if (checkImam.checked) roles.push("إمام");
+                if (checkKhatib.checked) roles.push("خطيب");
+                if (checkQayyim.checked) roles.push("قيم");
+                if (checkMuhaffiz.checked) roles.push("محفظ");
+                if (checkMuhaffiza.checked) roles.push("محفظة");
+
+                if (!name || !mosque || roles.length === 0) {
+                    alert("يرجى إكمال كافة البيانات واختيار صفة واحدة على الأقل.");
+                    return;
+                }
+
+                const id = editWorkerId.value;
+                if (id) {
+                    const idx = workers.findIndex(w => w.id == id);
+                    workers[idx] = { ...workers[idx], name, mosque, roles };
+                } else {
+                    workers.push({ id: nextWorkerId++, name, mosque, roles });
+                }
+
+                saveData();
+                closeAllModals();
+                renderTable();
+            }
+
+            window.editWorker = function(id) {
+                const w = workers.find(x => x.id == id);
+                if (!w) return;
+                workerName.value = w.name;
+                workerMosque.value = w.mosque;
+                checkImam.checked = w.roles.includes("إمام");
+                checkKhatib.checked = w.roles.includes("خطيب");
+                checkQayyim.checked = w.roles.includes("قيم");
+                checkMuhaffiz.checked = w.roles.includes("محفظ");
+                checkMuhaffiza.checked = w.roles.includes("محفظة");
+                
+                // تحديث حالة التعطيل بناءً على القيم المحملة
+                if (checkMuhaffiza.checked) {
+                    maleRoles.forEach(cb => cb.disabled = true);
+                } else if (w.roles.some(r => ["إمام", "خطيب", "قيم", "محفظ"].includes(r))) {
+                    femaleRole.disabled = true;
+                }
+
+                editWorkerId.value = w.id;
+                workerModalTitle.innerText = '✏️ تعديل بيانات العامل';
+                workerListModal.classList.remove('show');
+                workerModal.classList.add('show');
+            }
+
+            window.deleteWorker = function(id) {
+                if (confirm("هل أنت متأكد من حذف هذا العامل؟ سيتم حذف كافة إجازاته أيضاً.")) {
+                    workers = workers.filter(w => w.id != id);
+                    leaves = leaves.filter(l => l.workerId != id);
+                    saveData();
+                    renderWorkerList();
+                    renderTable();
+                }
+            }
+
+            function renderWorkerList(search = '') {
+                workerListBody.innerHTML = '';
+                const filtered = workers.filter(w => w.name.includes(search) || w.mosque.includes(search));
+                for (let w of filtered) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'worker-row';
+                    tr.innerHTML = `
+                        <td onclick="window.showProfile(${w.id})">${w.name}</td>
+                        <td onclick="window.showProfile(${w.id})">${w.mosque}</td>
+                        <td onclick="window.showProfile(${w.id})">${w.roles.join('، ')}</td>
+                        <td class="action-btns">
+                            <button class="action-btn" onclick="window.editWorker(${w.id})">تعديل</button>
+                            <button class="action-btn" onclick="window.deleteWorker(${w.id})">حذف</button>
+                        </td>
+                    `;
+                    workerListBody.appendChild(tr);
+                }
+            }
+
+            function openWorkerListModal() {
+                renderWorkerList();
+                workerListModal.classList.add('show');
+            }
+
+            function setupWorkerSearch() {
+                workerSearchInput.addEventListener('input', (e) => {
+                    const val = e.target.value.trim();
+                    if (!val) {
+                        workerSuggestions.classList.add('hidden');
+                        return;
+                    }
+                    const matches = workers.filter(w => w.name.includes(val));
+                    if (matches.length > 0) {
+                        workerSuggestions.innerHTML = '';
+                        matches.forEach(m => {
+                            const div = document.createElement('div');
+                            div.className = 'search-suggestion-item';
+                            div.innerText = m.name;
+                            div.onclick = () => selectWorkerForLeave(m);
+                            workerSuggestions.appendChild(div);
+                        });
+                        workerSuggestions.classList.remove('hidden');
+                    } else {
+                        workerSuggestions.classList.add('hidden');
+                    }
+                });
+            }
+
+            function selectWorkerForLeave(worker) {
+                workerSearchInput.value = worker.name;
+                selectedWorkerId.value = worker.id;
+                workerSuggestions.classList.add('hidden');
+                
+                leaveRole.innerHTML = '<option value="">-- اختر الصفة --</option>';
+                worker.roles.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r;
+                    opt.innerText = r;
+                    leaveRole.appendChild(opt);
+                });
+                leaveRole.disabled = false;
+                updateBalanceInfo();
+            }
+
+            function updateBalanceInfo() {
+                const wId = parseInt(selectedWorkerId.value);
+                const role = leaveRole.value;
+                leaveBalanceInfo.innerHTML = '';
+                if (!wId || !role) return;
+                const remaining = getRemainingDays(wId, role, editLeaveId.value ? parseInt(editLeaveId.value) : null);
+                const used = getUsedDays(wId, role, editLeaveId.value ? parseInt(editLeaveId.value) : null);
+                const balanceDiv = document.createElement('div');
+                balanceDiv.className = 'balance-info';
+                balanceDiv.innerHTML = `📊 الرصيد الحالي لصفة (${role}): مستخدم <b>${used}</b> يوم، متبقي <b>${remaining}</b> يوم.`;
+                leaveBalanceInfo.appendChild(balanceDiv);
+            }
+
+            function updateNotifications() {
+                checkAlerts();
+            }
+            
+            function saveLeave() {
+                const wId = parseInt(selectedWorkerId.value);
+                const role = leaveRole.value;
+                const start = leaveStart.value;
+                const end = leaveEnd.value;
+                const leaveId = editLeaveId.value ? parseInt(editLeaveId.value) : null;
+
+                leaveErrorMessage.innerHTML = '';
+
+                if (!wId || !role || !start || !end) {
+                    leaveErrorMessage.innerHTML = '<div class="error-message">يرجى إكمال كافة البيانات.</div>';
+                    return;
+                }
+
+                if (new Date(start) > new Date(end)) {
+                    leaveErrorMessage.innerHTML = '<div class="error-message">تاريخ البدء يجب أن يكون قبل تاريخ الانتهاء.</div>';
+                    return;
+                }
+
+                const days = dateDiffInDays(start, end);
+                const remaining = getRemainingDays(wId, role, leaveId);
+
+                if (days > remaining) {
+                    leaveErrorMessage.innerHTML = `<div class="error-message">عذراً، الرصيد المتبقي لصفة (${role}) هو ${remaining} يوم فقط.</div>`;
+                    return;
+                }
+
+                if (isOverlapping(wId, role, start, end, leaveId)) {
+                    leaveErrorMessage.innerHTML = `<div class="error-message">يوجد تداخل في تواريخ الإجازة لهذه الصفة (${role}).</div>`;
+                    return;
+                }
+
+                if (leaveId) {
+                    const idx = leaves.findIndex(l => l.id === leaveId);
+                    leaves[idx] = { ...leaves[idx], workerId: wId, role, startDate: start, endDate: end };
+                } else {
+                    leaves.push({ id: nextLeaveId++, workerId: wId, role, startDate: start, endDate: end, isBackToWork: false });
+                }
+
+                saveData();
+                closeAllModals();
+                renderTable();
+                checkAlerts();
+            }
+
+            window.resumeLeave = function(id) {
+                const l = leaves.find(x => x.id == id);
+                if (l) {
+                    l.isBackToWork = true;
+                    saveData();
+                    renderTable();
+                    checkAlerts();
+                    if (workerProfileModal.classList.contains('show')) {
+                        window.showProfile(l.workerId);
+                    }
+                }
+            }
+
+            window.resumeLeaveFromAlert = function(id) { window.resumeLeave(id); }
+            window.deleteLeaveFromAlert = function(id) { window.deleteLeave(id); }
+
+            window.editLeave = function(id) {
+                const l = leaves.find(x => x.id == id);
+                if (!l) return;
+                const worker = workers.find(w => w.id === l.workerId);
+                selectWorkerForLeave(worker);
+                leaveRole.value = l.role;
+                leaveStart.value = l.startDate;
+                leaveEnd.value = l.endDate;
+                editLeaveId.value = l.id;
+                updateBalanceInfo();
+                workerProfileModal.classList.remove('show');
+                leaveModal.classList.add('show');
+            }
+
+            window.deleteLeave = function(id) {
+                if (confirm("هل أنت متأكد من حذف هذه الإجازة؟")) {
+                    const l = leaves.find(x => x.id == id);
+                    const wId = l ? l.workerId : null;
+                    leaves = leaves.filter(x => x.id != id);
+                    saveData();
+                    renderTable();
+                    checkAlerts();
+                    if (wId && workerProfileModal.classList.contains('show')) {
+                        window.showProfile(wId);
+                    }
+                }
+            }
+
+            window.showProfile = function(workerId) {
+                const worker = workers.find(w => w.id == workerId);
+                if (!worker) return;
+
+                // إضافة تعريف todayString المفقود
+                const todayDate = new Date();
+                const todayString = todayDate.getFullYear() + '-' + 
+                    String(todayDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(todayDate.getDate()).padStart(2, '0');
+
+                profileWorkerName.innerText = `سجل إجازات: ${worker.name}`;
+                profileName.innerText = worker.name;
+                profileMosque.innerText = worker.mosque;
+                profileRoles.innerText = worker.roles.join('، ');
+
+                balanceGrid.innerHTML = '';
+                worker.roles.forEach(role => {
+                    const used = getUsedDays(worker.id, role);
+                    const remaining = getRemainingDays(worker.id, role);
+                    const percentage = (used / MAX_ANNUAL_LEAVE_DAYS) * 100;
+                    
+                    let cardClass = 'balance-card';
+                    if (remaining <= 5) cardClass += ' danger';
+                    else if (remaining <= 10) cardClass += ' warning';
+
+                    const card = document.createElement('div');
+                    card.className = cardClass;
+                    card.innerHTML = `
+                        <div class="balance-role">${role}</div>
+                        <div class="balance-details">
+                            <div>مستخدم: <strong>${used}</strong> يوم</div>
+                            <div>متبقي: <strong>${remaining}</strong> يوم</div>
+                            <div class="balance-bar">
+                                <div class="balance-bar-fill" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                    balanceGrid.appendChild(card);
+                });
+
+                profileLeavesBody.innerHTML = '';
+                const workerLeaves = leaves.filter(l => l.workerId == workerId).sort((a,b) => new Date(b.startDate) - new Date(a.startDate));
+                
+                if (workerLeaves.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="6" style="text-align: center; color: #999;">لا توجد إجازات مسجلة</td>';
+                    profileLeavesBody.appendChild(tr);
+                } else {
+                    workerLeaves.forEach(l => {
+                        const days = dateDiffInDays(l.startDate, l.endDate);
+                        let statusText = '', badgeClass = '';
+                        if (l.isBackToWork) {
+                            statusText = 'باشر العمل'; badgeClass = 'badge-done';
+                        } else {
+                            const startStr = l.startDate;
+                            const endStr = l.endDate;
+                            if (endStr < todayString) {
+                                statusText = 'منتهية'; badgeClass = 'badge-danger';
+                            } else if (startStr > todayString) {
+                                statusText = 'تبدأ قريباً'; badgeClass = 'badge-upcoming';
+                            } else {
+                                statusText = 'جارية'; badgeClass = 'badge-active';
+                            }
+                        }
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${l.role}</td>
+                            <td>${l.startDate}</td>
+                            <td>${l.endDate}</td>
+                            <td>${days}</td>
+                            <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                            <td class="action-btns">
+                                ${!l.isBackToWork ? `<button class="action-btn" onclick="window.resumeLeave(${l.id})">باشر</button>` : ''}
+                                <button class="action-btn" onclick="window.editLeave(${l.id})">تعديل</button>
+                                <button class="action-btn" onclick="window.deleteLeave(${l.id})">حذف</button>
+                            </td>
+                        `;
+                        profileLeavesBody.appendChild(tr);
+                    });
+                }
+
+                addLeaveFromProfileBtn.onclick = () => {
+                    clearLeaveForm();
+                    selectWorkerForLeave(worker);
+                    workerProfileModal.classList.remove('show');
+                    leaveModal.classList.add('show');
+                };
+
+                workerListModal.classList.remove('show');
+                workerProfileModal.classList.add('show');
+            }
+
+            function exportBackup() {
+                const data = { workers, leaves, nextWorkerId, nextLeaveId };
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `نسخة_احتياطية_${new Date().toISOString().slice(0,10)}.json`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+                alert('✅ تم تصدير النسخة الاحتياطية بنجاح!');
+            }
+
+            function importBackup() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const imported = JSON.parse(event.target.result);
+                            if (!imported.workers || !imported.leaves) {
+                                alert('❌ ملف غير صحيح! تأكد من أنه ملف نسخة احتياطية صحيح.');
+                                return;
+                            }
+                            workers = imported.workers || [];
+                            leaves = imported.leaves || [];
+                            nextWorkerId = imported.nextWorkerId || 1;
+                            nextLeaveId = imported.nextLeaveId || 1;
+                            saveData();
+                            renderTable();
+                            checkAlerts();
+                            alert('✅ تم استيراد البيانات بنجاح!');
+                        } catch (err) {
+                            alert('❌ خطأ في قراءة الملف: ' + err.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            }
+
+            function closeAllModals() {
+                workerModal.classList.remove('show');
+                leaveModal.classList.remove('show');
+                workerListModal.classList.remove('show');
+                workerProfileModal.classList.remove('show');
+                notificationsModal.classList.remove('show');
+                clearWorkerForm();
+                clearLeaveForm();
+            }
+
+            function clearWorkerForm() {
+                workerName.value = ''; workerMosque.value = '';
+                checkImam.checked = false; checkKhatib.checked = false; checkQayyim.checked = false;
+                checkMuhaffiz.checked = false; checkMuhaffiza.checked = false;
+                
+                checkImam.disabled = false; checkKhatib.disabled = false; checkQayyim.disabled = false;
+                checkMuhaffiz.disabled = false; checkMuhaffiza.disabled = false;
+
+                editWorkerId.value = ''; workerModalTitle.innerText = '➕ إضافة عامل جديد';
+            }
+
+            function clearLeaveForm() {
+                workerSearchInput.value = ''; selectedWorkerId.value = '';
+                leaveRole.innerHTML = '<option value="">-- اختر العامل أولاً --</option>';
+                leaveRole.disabled = true; leaveStart.value = ''; leaveEnd.value = '';
+                editLeaveId.value = ''; leaveErrorMessage.innerHTML = ''; leaveBalanceInfo.innerHTML = '';
+            }
+
+            addWorkerBtn.addEventListener('click', () => { clearWorkerForm(); workerModal.classList.add('show'); });
+            addLeaveBtn.addEventListener('click', () => { clearLeaveForm(); leaveModal.classList.add('show'); });
+            manageWorkersBtn.addEventListener('click', openWorkerListModal);
+            exportBtn.addEventListener('click', exportBackup);
+            importBtn.addEventListener('click', importBackup);
+            notificationsBtn.addEventListener('click', () => { notificationsModal.classList.add('show'); });
+            cancelWorkerBtn.addEventListener('click', closeAllModals);
+            cancelLeaveBtn.addEventListener('click', closeAllModals);
+            closeWorkerListBtn.addEventListener('click', closeAllModals);
+            closeProfileBtn.addEventListener('click', closeAllModals);
+            closeNotificationsBtn.addEventListener('click', closeAllModals);
+            saveWorkerBtn.addEventListener('click', saveWorker);
+            saveLeaveBtn.addEventListener('click', saveLeave);
+            workerListSearch.addEventListener('input', (e) => renderWorkerList(e.target.value));
+            leaveRole.addEventListener('change', updateBalanceInfo);
+            
+            // إغلاق المودالات عند الضغط على الخلفية
+            [workerModal, leaveModal, workerListModal, workerProfileModal, notificationsModal].forEach(modal => {
+                if (modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) closeAllModals();
+                    });
+                }
+            });
+
+            // ========== معالج حالة الاتصال بـ Firebase ==========
+            let connectionStatusElement = null;
+            let isConnected = false;
+            let reconnectAttempts = 0;
+            const MAX_RECONNECT_ATTEMPTS = 10;
+            let reconnectTimer = null;
+
+            function createConnectionStatusElement() {
+                if (connectionStatusElement) return;
+                connectionStatusElement = document.createElement('div');
+                connectionStatusElement.id = 'connectionStatus';
+                connectionStatusElement.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 20px;
+                    padding: 12px 20px;
+                    border-radius: 20px;
+                    font-weight: 600;
+                    z-index: 9999;
+                    display: none;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    animation: slideIn 0.3s ease-out;
+                `;
+                document.body.appendChild(connectionStatusElement);
+            }
+
+            function updateConnectionStatus(connected) {
+                isConnected = connected;
+                if (!connectionStatusElement) createConnectionStatusElement();
+
+                if (connected) {
+                    connectionStatusElement.style.display = 'none';
+                    reconnectAttempts = 0;
+                    if (reconnectTimer) clearInterval(reconnectTimer);
+                    console.log('✅ تم استعادة الاتصال بـ Firebase');
+                } else {
+                    connectionStatusElement.style.display = 'block';
+                    connectionStatusElement.textContent = '⚠️ الاتصال مقطوع - جاري محاولة إعادة الاتصال...';
+                    connectionStatusElement.style.background = '#fff3cd';
+                    connectionStatusElement.style.color = '#856404';
+                    connectionStatusElement.style.border = '1px solid #ffeaa7';
+                    console.warn('❌ تم قطع الاتصال بـ Firebase');
+                    attemptReconnect();
+                }
+            }
+
+            function attemptReconnect() {
+                if (reconnectTimer) return; // إذا كانت هناك محاولة إعادة اتصال جارية
+                
+                reconnectTimer = setInterval(() => {
+                    reconnectAttempts++;
+                    console.log(`محاولة إعادة الاتصال ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}...`);
+                    
+                    if (firebaseReady && appDataRef) {
+                        appDataRef.once('value', (snapshot) => {
+                            if (snapshot.val() !== null) {
+                                updateConnectionStatus(true);
+                                clearInterval(reconnectTimer);
+                                reconnectTimer = null;
+                                loadData(); // إعادة تحميل البيانات
+                            }
+                        }).catch(() => {
+                            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                                connectionStatusElement.textContent = '❌ فشل الاتصال - يتم استخدام البيانات المحفوظة محلياً';
+                                connectionStatusElement.style.background = '#f8d7da';
+                                connectionStatusElement.style.color = '#721c24';
+                                connectionStatusElement.style.border = '1px solid #f5c6cb';
+                                clearInterval(reconnectTimer);
+                                reconnectTimer = null;
+                            }
+                        });
+                    }
+                }, 5000); // محاولة إعادة الاتصال كل 5 ثوان
+            }
+
+            function setupConnectionMonitoring() {
+                if (!firebaseReady || !appDataRef) {
+                    console.warn('Firebase غير جاهز للمراقبة');
+                    return;
+                }
+
+                try {
+                    firebase.database().ref('.info/connected').on('value', (snapshot) => {
+                        if (snapshot.val() === true) {
+                            updateConnectionStatus(true);
+                        } else {
+                            updateConnectionStatus(false);
+                        }
+                    });
+                } catch (error) {
+                    console.warn('لم يتمكن من إعداد مراقبة الاتصال:', error);
+                }
+            }
+
+            // مراقبة حالة الاتصال بالإنترنت
+            window.addEventListener('online', () => {
+                console.log('✅ تم استعادة الاتصال بالإنترنت');
+                if (firebaseReady) {
+                    updateConnectionStatus(true);
+                    loadData();
+                }
+            });
+
+            window.addEventListener('offline', () => {
+                console.log('❌ تم قطع الاتصال بالإنترنت');
+                updateConnectionStatus(false);
+            });
+
+            // ========== بدء التطبيق ==========
+            async function init() {
+                try {
+                    createConnectionStatusElement();
+                    initializeFirebase();
+                    setupConnectionMonitoring();
+                    await loadData();
+                    setupWorkerSearch();
+                    renderTable();
+                    checkAlerts();
+                    updateConnectionStatus(true);
+                    console.log('🚀 تم تشغيل النظام بنجاح');
+                } catch (error) {
+                    console.error('خطأ في بدء التطبيق:', error);
+                    // لا تظهر تنبيه للمستخدم هنا لأن الخطأ قد يكون بسبب ضعف الاتصال فقط
+                }
+            }
+            init();
+            
+            // تحديث التنبيهات عند إضافة أو تعديل إجازة
+            window.addEventListener('leaveUpdated', checkAlerts);
+        } // إغلاق initApp
+    </script>
+</body>
+</html>
